@@ -9,7 +9,7 @@ ENV LANG en_US.UTF-8
 ENV LANGUAGE en_US.UTF-8
 
 # Install tindetheus dependencies
-RUN apt-get install -y git vim nano python3-dev python3-numpy python3-scipy python3-pip python3-venv wget perl unzip libsm6 libxrender1
+RUN apt-get install -y git vim nano python3-dev python3-numpy python3-scipy python3-pip python3-venv wget perl unzip libsm6 libxrender1 libgl1-mesa-glx
 
 # copy the cloned tindedetheus repo
 COPY . tindetheus
