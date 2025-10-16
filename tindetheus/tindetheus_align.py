@@ -61,6 +61,8 @@ from skimage import img_as_ubyte
 import sys
 import os
 import tensorflow as tf
+# Disable TensorFlow 2.x behavior for compatibility
+tf.compat.v1.disable_eager_execution()
 import numpy as np
 import tindetheus.facenet_clone.facenet as facenet
 from tindetheus.facenet_clone.align import detect_face
@@ -83,8 +85,8 @@ def main(input_dir='database', output_dir='database_aligned', image_size=182,
     print('Creating networks and loading parameters')
 
     with tf.Graph().as_default():
-        gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=gpu_memory_fraction)  # noqa: E501
-        sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options,
+        gpu_options = tf.compat.v1.GPUOptions(per_process_gpu_memory_fraction=gpu_memory_fraction)  # noqa: E501
+        sess = tf.compat.v1.Session(config=tf.compat.v1.ConfigProto(gpu_options=gpu_options,
                           log_device_placement=False))
         with sess.as_default():
             pnet, rnet, onet = detect_face.create_mtcnn(sess, None)

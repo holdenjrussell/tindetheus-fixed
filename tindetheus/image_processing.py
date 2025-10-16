@@ -27,6 +27,7 @@ from __future__ import print_function
 
 import os
 import shutil
+import ssl
 
 import matplotlib.pyplot as plt
 import imageio
@@ -40,7 +41,11 @@ except NameError:
     FileNotFoundError = IOError
 
 try:
-    from urllib.request import urlretrieve
+    from urllib.request import urlretrieve, urlopen
+    import urllib.request
+    # Create SSL context that doesn't verify certificates
+    ssl_context = ssl._create_unverified_context()
+    urllib.request.install_opener(urllib.request.build_opener(urllib.request.HTTPSHandler(context=ssl_context)))
 except ImportError:
     from urllib import urlretrieve
 
@@ -53,21 +58,35 @@ def clean_temp_images():
 
 def clean_temp_images_aligned():
     # delete the temp images aligned dir
-    shutil.rmtree('temp_images_aligned')
+    if os.path.exists('temp_images_aligned'):
+        shutil.rmtree('temp_images_aligned', ignore_errors=True)
 
 
 def download_url_photos(urls, userID, is_temp=False):
     # define a function which downloads the pictures of urls
+    import urllib.request
     count = 0
     image_list = []
     if is_temp is True:
         os.makedirs('temp_images/temp')
+
+    # Create SSL context that doesn't verify certificates for macOS
+    ssl_context = ssl._create_unverified_context()
+
     for url in urls:
         if is_temp is True:
             image_list.append('temp_images/temp/'+userID+'.'+str(count)+'.jpg')
         else:
             image_list.append('temp_images/'+userID+'.'+str(count)+'.jpg')
-        urlretrieve(url, image_list[-1])
+
+        # Download with SSL context
+        try:
+            with urllib.request.urlopen(url, context=ssl_context) as response:
+                with open(image_list[-1], 'wb') as out_file:
+                    out_file.write(response.read())
+        except Exception as e:
+            print(f"Warning: Could not download image {count} for user {userID}: {e}")
+
         count += 1
     return image_list
 
@@ -139,10 +158,31 @@ def show_images(images, holdon=False, title=None, nmax=49):
         n_row = n // n_col
     else:
         n_row = n // 3 + 1
+
+    # Create a reasonable figure size (width, height in inches)
+    # Smaller size to leave room for terminal
+    figsize = (n_col * 3, n_row * 3)
+
     if title is None:
-        plt.figure()
+        fig = plt.figure(figsize=figsize)
     else:
-        plt.figure(title)
+        fig = plt.figure(title, figsize=figsize)
+
+    # Position window on left half of screen (macOS compatible)
+    try:
+        manager = plt.get_current_fig_manager()
+        # Use matplotlib's backend to position the window
+        # Position at (0, 0) which is top-left, and let the OS handle sizing
+        if hasattr(manager, 'window'):
+            # For TkAgg backend on macOS
+            try:
+                # Get the window and position it
+                manager.window.wm_geometry("+0+0")
+            except:
+                pass
+    except:
+        pass  # Fallback if positioning fails
+
     plt.tight_layout()
     for j, i in enumerate(images):
         if j == nmax:

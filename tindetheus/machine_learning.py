@@ -136,14 +136,21 @@ def like_or_dislike():
     # define a function to get like or dislike input
     likeOrDislike = '0'
     while likeOrDislike != 'j' and likeOrDislike != 'l' \
-            and likeOrDislike != 'f' and likeOrDislike != 's':
+            and likeOrDislike != 'f' and likeOrDislike != 's' \
+            and likeOrDislike != 'n' and likeOrDislike != 'q':
 
-        likeOrDislike = input()
+        try:
+            likeOrDislike = input()
+        except KeyboardInterrupt:
+            print('\n\nExiting gracefully...')
+            raise SystemExit(0)
+
         if likeOrDislike == 'j' or likeOrDislike == 'f':
             return 'Dislike'
         elif likeOrDislike == 'l' or likeOrDislike == 's':
             return 'Like'
+        elif likeOrDislike == 'n' or likeOrDislike == 'q':
+            return 'Skip'
         else:
-            print('you must enter either l or s for like,'
-                  ' or j or f for dislike')
+            print('you must enter either l or s for like, j or f for dislike, or n or q to skip/quit')
             likeOrDislike = input()

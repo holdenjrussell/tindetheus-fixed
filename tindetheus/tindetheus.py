@@ -32,6 +32,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
+# Disable TensorFlow 2.x behavior for compatibility
+tf.compat.v1.disable_eager_execution()
 import joblib
 
 try:
@@ -139,7 +141,7 @@ def main(args, facebook_token, x_auth_token=None, retries=20):
             print('... Loading the facenet model ...')
             print('... be patient this may take some time ...')
             with tf.Graph().as_default():
-                with tf.Session() as sess:
+                with tf.compat.v1.Session() as sess:
                     # pass the tf session into client object
                     my_sess = client(facebook_token, args.distance,
                                      args.model_dir, likes_left=args.likes,

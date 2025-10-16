@@ -80,6 +80,8 @@ import imageio
 from skimage.transform import resize
 import time
 import tensorflow as tf
+# Disable TensorFlow 2.x behavior for compatibility
+tf.compat.v1.disable_eager_execution()
 import numpy as np
 # import sys
 import os
@@ -108,15 +110,15 @@ def main(model_dir='20170512-110547', data_dir='database_aligned',
                      os.path.isdir(os.path.join(path_exp, name))]
     with tf.Graph().as_default():
 
-        with tf.Session() as sess:
+        with tf.compat.v1.Session() as sess:
 
             # Load the model
             facenet.load_model(model_dir)
 
             # Get input and output tensors
-            images_placeholder = tf.get_default_graph().get_tensor_by_name("input:0")  # noqa: E501
-            embeddings = tf.get_default_graph().get_tensor_by_name("embeddings:0")  # noqa: E501
-            phase_train_placeholder = tf.get_default_graph().get_tensor_by_name("phase_train:0")  # noqa: E501
+            images_placeholder = tf.compat.v1.get_default_graph().get_tensor_by_name("input:0")  # noqa: E501
+            embeddings = tf.compat.v1.get_default_graph().get_tensor_by_name("embeddings:0")  # noqa: E501
+            phase_train_placeholder = tf.compat.v1.get_default_graph().get_tensor_by_name("phase_train:0")  # noqa: E501
 
             # Run forward pass to calculate embeddings
             nrof_images = len(image_list)
@@ -177,8 +179,8 @@ def load_and_align_data(image_paths, image_size, margin, gpu_memory_fraction):
 
     print('Creating networks and loading parameters')
     with tf.Graph().as_default():
-        gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=gpu_memory_fraction)  # noqa: E501
-        sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options,
+        gpu_options = tf.compat.v1.GPUOptions(per_process_gpu_memory_fraction=gpu_memory_fraction)  # noqa: E501
+        sess = tf.compat.v1.Session(config=tf.compat.v1.ConfigProto(gpu_options=gpu_options,
                                                 log_device_placement=False))
         with sess.as_default():
             pnet, rnet, onet = detect_face.create_mtcnn(sess, None)

@@ -61,6 +61,7 @@ from __future__ import print_function
 from builtins import input
 
 import os
+import sys
 import time
 import pynder
 from pynder.errors import RecsTimeout
@@ -69,6 +70,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
 import joblib
+
+# Suppress macOS IMKClient messages
+os.environ['PYTHONUNBUFFERED'] = '1'
 
 from tindetheus import tindetheus_align
 import tindetheus.facenet_clone.facenet as facenet
@@ -132,6 +136,7 @@ class client:
         # Browse user profiles one at a time. You will be presented with the
         # opportunity to like or dislike profiles. Your history will be
         # stored in a database that you can use for training.
+
         for user in users:
             print('********************************************************')
             print(user.name, user.age, 'Distance in km: ', user.distance_km)
@@ -140,7 +145,7 @@ class client:
             print(user.bio)
             print('--------------------------------------------------------')
             print('Do you like this user?')
-            print('type l or s for like, or j or f for dislike   ')
+            print('type l or s for like, j or f for dislike, or n or q to skip/quit')
             urls = user.get_photos(width='640')
             image_list = imgproc.download_url_photos(urls, user.id)
             imgproc.show_images(image_list)
@@ -148,18 +153,47 @@ class client:
             didILike = ml.like_or_dislike()
             plt.close('all')
 
+            # Handle skip
+            if didILike == 'Skip':
+                print('⊘ Skipped')
+                # Clean up images without saving
+                for img in image_list:
+                    try:
+                        os.remove(img)
+                    except:
+                        pass
+                continue
+
             dbase_names = imgproc.move_images(image_list, user.id, didILike)
 
+            api_success = False
             if didILike == 'Like':
-                print(user.like())
-                self.likes_left -= 1
+                try:
+                    result = user.like()
+                    print(f'✓ Liked {user.name} (user_id: {user.id})')
+                    if result:
+                        print(f'  → Match! {result}')
+                    self.likes_left -= 1
+                    api_success = True
+                except Exception as e:
+                    print(f'✗ Error liking {user.name}: {e}')
+                    print(f'  → User NOT saved to database due to API error')
             else:
-                print(user.dislike())
-            userList = [user.id, user.name, user.age, user.bio,
-                        user.distance_km, user.jobs, user.schools,
-                        user.get_photos(width='640'), dbase_names, didILike]
-            self.database.append(userList)
-            np.save('database.npy', self.database)
+                try:
+                    user.dislike()
+                    print(f'✓ Passed {user.name} (user_id: {user.id})')
+                    api_success = True
+                except Exception as e:
+                    print(f'✗ Error passing {user.name}: {e}')
+                    print(f'  → User NOT saved to database due to API error')
+
+            # Only save to database if API call succeeded
+            if api_success:
+                userList = [user.id, user.name, user.age, user.bio,
+                            user.distance_km, user.jobs, user.schools,
+                            user.get_photos(width='640'), dbase_names, didILike]
+                self.database.append(userList)
+                np.save('database.npy', np.array(self.database, dtype=object))
 
     def like_or_dislike_users(self, users):
         # automatically like or dislike users based on your previously trained
@@ -190,9 +224,9 @@ class client:
             image_list_temp, label_list = facenet.get_image_paths_and_labels(train_set)  # noqa: E501
 
             # Get input and output tensors
-            images_placeholder = tf.get_default_graph().get_tensor_by_name("input:0")  # noqa: E501
-            embeddings = tf.get_default_graph().get_tensor_by_name("embeddings:0")  # noqa: E501
-            phase_train_placeholder = tf.get_default_graph().get_tensor_by_name("phase_train:0")  # noqa: E501
+            images_placeholder = tf.compat.v1.get_default_graph().get_tensor_by_name("input:0")  # noqa: E501
+            embeddings = tf.compat.v1.get_default_graph().get_tensor_by_name("embeddings:0")  # noqa: E501
+            phase_train_placeholder = tf.compat.v1.get_default_graph().get_tensor_by_name("phase_train:0")  # noqa: E501
 
             # Run forward pass to calculate embeddings
             nrof_images = len(image_list_temp)
@@ -265,17 +299,36 @@ class client:
 
             dbase_names = imgproc.move_images_temp(image_list, user.id)
 
+            api_success = False
             if didILike == 'Like':
-                print(user.like())
-                self.likes_left -= 1
+                try:
+                    result = user.like()
+                    print(f'✓ Liked {user.name} (user_id: {user.id})')
+                    if result:
+                        print(f'  → Match! {result}')
+                    self.likes_left -= 1
+                    api_success = True
+                except Exception as e:
+                    print(f'✗ Error liking {user.name}: {e}')
+                    print(f'  → User NOT saved to database due to API error')
             else:
-                print(user.dislike())
-            userList = [user.id, user.name, user.age, user.bio,
-                        user.distance_km, user.jobs, user.schools,
-                        user.get_photos(width='640'), dbase_names,
-                        didILike]
-            self.al_database.append(userList)
-            np.save('al_database.npy', self.al_database)
+                try:
+                    user.dislike()
+                    print(f'✓ Passed {user.name} (user_id: {user.id})')
+                    api_success = True
+                except Exception as e:
+                    print(f'✗ Error passing {user.name}: {e}')
+                    print(f'  → User NOT saved to database due to API error')
+
+            # Only save to database if API call succeeded
+            if api_success:
+                userList = [user.id, user.name, user.age, user.bio,
+                            user.distance_km, user.jobs, user.schools,
+                            user.get_photos(width='640'), dbase_names,
+                            didILike]
+                self.al_database.append(userList)
+                np.save('al_database.npy', np.array(self.al_database, dtype=object))
+
             imgproc.clean_temp_images_aligned()
 
     def browse(self):
